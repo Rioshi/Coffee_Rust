@@ -32,7 +32,7 @@ roya$HT2[roya$HT2 == 0] <- 1
 #########################
 #Regresion Poisson simple
 #########################
-md1 <- glm( formula =HE2  ~ Z, family = poisson(link = log),data=roya,na.action = na.omit)
+md1 <- glm( formula =HE2  ~ Z, family = poisson(link = log),data=roya[-23,],na.action = na.omit)
 summary(md1)
 source('http://www.poleto.com/funcoes/envel.pois.txt')
 source('http://www.poleto.com/funcoes/diag.pois.txt')
@@ -41,19 +41,25 @@ diag.pois(md1)
 
 phi<-md1$deviance/md1$df.residual
 phi
+AER::dispersiontest(md1,alternative = "two.sided")
+
+library(boot)
+(cv.err <- cv.glm(roya[-23,], md1)$delta)
+glm.diag(md1)
 
 #Regresion Poisson con offset
-md2 <- glm(formula = HE2 ~ Z +offset(log(HT2)), family = poisson(link = log),data=roya,na.action = na.omit)
+md2 <- glm(formula = HE2 ~ Z +offset(log(HT2)), family = poisson(link = log),data=roya[-23,],na.action = na.omit)
 summary(md2)
 envel.pois(md2)
-diag.pois(md2,iden=c(2,2,2,0,3,3,3,0))
+diag.pois(md2,iden=c(0,0,0,0,0,0,0,0))
 
 phi<-md2$deviance/md2$df.residual
 phi
+AER::dispersiontest(md2,alternative = "two.sided")
 
 #Regresion binomial negativa
 library(MASS)
-md3=glm.nb(HE2 ~ Z,link=log,data=roya)
+md3=glm.nb(HE2 ~ Z,link=log,data=roya[-23,])
 summary(md3)
 source('http://www.poleto.com/funcoes/diag.nb.txt')
 diag.nb(md3)

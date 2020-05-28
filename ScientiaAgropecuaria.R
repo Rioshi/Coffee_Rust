@@ -38,7 +38,7 @@ library(ggplot2)
 covariables <- readRDS("F:/roya/ScientiaAgropecuaria2020/Rdata/covariables.rds")
 covariables <- dropLayer(covariables,i=c(1))
 nn <- names(covariables)
-nn[c(1,2,6,7,8,17,18)] <- c("Asp","Elv","Ppt","LST_B10","LST_B11","Tm","Ws")
+nn[c(1,2,6,7,8,17,18)] <- c("Asp","Elv","Ppt","LB_B10","LB_B11","Tm","Ws")
 names(covariables) <- nn
 rm(nn)
 
@@ -106,7 +106,10 @@ write.csv(var.val$cor,file="F:/roya/ScientiaAgropecuaria2020/Rdata/PCA_corr.csv"
 jpeg("F:/roya/ScientiaAgropecuaria2020/Figuras/biplot.jpeg", width = 25, height = 17, units = 'cm', res = 600, pointsize = 50)
 fviz_pca_var(res.PCA, col.var = "black", repel = TRUE,
              font.x=12,font.y=12,font.xtickslab=12,font.ytickslab=12) +
-  labs(title = "")
+  labs(title = "") +
+  theme(text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 12))
 dev.off()
 
 #Para revisar el aporte de las observaciones
@@ -163,8 +166,22 @@ joincount.mc(fx=roya$ST,listw = sw,nsim=100000)
 rm(sw)
 
 #Comparacion severidad
-#ST <- read.delim("clipboard",header = TRUE)
-#saveRDS(ST,file="F:/roya/ScientiaAgropecuaria2020/Rdata/SVfrecuency.rds")
+library(qcc)
+tb.s1 <- table(roya$S1)
+tb.s2 <- table(roya$S2)
+tb.s3 <- table(roya$S3)
+tb.st <- table(roya$ST)
+
+par(mfrow=c(1,1))
+pareto.chart(tb.st,xlab="Severidad Total",
+             ylab="Frecuencia absoluta", ylab2="Frecuencia Porcentual",
+             main="Tercio Inferior")
+pareto.chart(tb.s2,xlab="Severidad",
+             ylab="Frecuencia absoluta", ylab2="Frecuencia Porcentual",
+             main="Tercio Medio")
+
+
+
 ST <- readRDS("F:/roya/ScientiaAgropecuaria2020/Rdata/SVfrecuency.rds")
 ggplot(data=ST,aes(x=Severidad,y=Fr,fill=Nivel)) +
   geom_bar("identity")
@@ -186,19 +203,19 @@ rm(ST)
 ###############################
 ## MODELAMIENTO DE INCIDENCIA 
 ###############################
-predictores <- c("NDVI","Elv","LST_B11","Asp","Slope")
+predictores <- c("NDVI","Elv","LB_B11","Asp","Slope")
 md.full <- paste("IT ~ ", paste(predictores,collapse = " + ")) 
 pairs(as.formula(md.full),data=roya)
 
-md <- lm(IT ~ NDVI+Slope+LST_B11+poly(Elv,2)+poly(Asp,2),data=roya)
+md <- lm(IT ~ NDVI+Slope+LB_B11+poly(Elv,2)+poly(Asp,2),data=roya)
 summary(md)
 lmtest:: bptest(md)
 car::vif(md)
 car::durbinWatsonTest(md)
 
 
-md0 <- betareg(IT ~ NDVI+Slope+LST_B11+Elv+Asp,data=roya,link="logit")
-md1 <- betareg(ITM ~ NDVI+Slope+LST_B11+poly(Elv,2)+poly(Asp,2),data=roya,link="logit")
+md0 <- betareg(IT ~ NDVI+Slope+LB_B11+Elv+Asp,data=roya,link="logit")
+md1 <- betareg(ITM ~ NDVI+Slope+LB_B11+poly(Elv,2)+poly(Asp,2),data=roya,link="logit")
 summary(md1) ; mean((roya$IT - predict(md1,roya))^2)
 
 plot(IT ~ Elv, data = roya)
@@ -210,7 +227,7 @@ lines(x=roya$Elv,y=predict(md1,roya))
 #plot(md1, which = 5, type = "deviance", sub.caption = "")
 
 set.seed(666)
-md2 <- breg.cv(roya,fm.es = IT ~ NDVI+Slope+LST_B11+poly(Elv,2)+poly(Asp,2),respuesta = 16,k=10,t=1000,family="logit")
+md2 <- breg.cv(roya,fm.es = IT ~ NDVI+Slope+LB_B11+poly(Elv,2)+poly(Asp,2),respuesta = 16,k=10,t=1000,family="logit")
 md2
 
 library(ggplot2)
@@ -286,7 +303,7 @@ p1 <- rasterVis::levelplot(IT*100, par.settings = RdBuTheme,margin=FALSE,
 library(VGAM)
 library(ordinal)
 mod0 <- vglm(ST ~ 1, family=cumulative(parallel=TRUE), data = roya)
-mod1 <- vglm(ST ~ NDVI+Slope+LST_B11+poly(Elv,2)+poly(Asp,2), family=cumulative(parallel=TRUE), data = roya) 
+mod1 <- vglm(ST ~ NDVI+Slope+LB_B11+poly(Elv,2)+poly(Asp,2), family=cumulative(parallel=TRUE), data = roya) 
 summary(mod1) ;  1 - (logLik(mod1)/logLik(mod0))
 AIC(mod1)
 
@@ -410,7 +427,7 @@ Ord.cv <- function(data,fm.es,respuesta,k,t,...){
 
 }
 
-Ord.cv(roya,fm.es = ST ~ NDVI+Slope+LST_B11+poly(Elv,2)+poly(Asp,2),respuesta = 17,k=10,t=1)
+Ord.cv(roya,fm.es = ST ~ NDVI+Slope+LB_B11+poly(Elv,2)+poly(Asp,2),respuesta = 17,k=10,t=1)
 
 
 
@@ -464,7 +481,7 @@ for (i in 1:length(Mod.full)) {
 }
 
 regMat <- cbind(regMat,psR)
-names(regMat) <- c("NDVI","Elv","LST_B11","Asp","Slope","N_pred","Logit","Probit","cloglog","Log","LogLog")
+names(regMat) <- c("NDVI","Elv","LB_B11","Asp","Slope","N_pred","Logit","Probit","cloglog","Log","LogLog")
 rm(psR)
 
 
